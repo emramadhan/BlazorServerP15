@@ -1,0 +1,82 @@
+﻿@page "/addPublisher/{isbnDummy:long}"
+@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "User")]
+@inject IPublisherService publisherService
+@inject Microsoft.AspNetCore.Components.NavigationManager navigationManager
+<h3>
+   Add Publisher
+</h3>
+
+<form>
+   <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tbody>
+         <tr>
+            <td>
+               <label for="Name" class="control-label">Name</label>
+            </td>
+            <td>
+               <input for="Name" class="form-control"
+                      @bind="@publisher.Name" />
+            </td>
+         </tr>
+         <tr>
+            <td>
+               <label for="City" class="control-label">City</label>
+            </td>
+            <td>
+               <input for="City" class="form-control"
+                      @bind="@publisher.City" />
+            </td>
+         </tr>
+         <tr>
+            <td>
+               <label for="Country" class="control-label">
+                  Country
+               </label>
+            </td>
+            <td>
+               <input for="Country" class="form-control"
+                      @bind="@publisher.Country" />
+            </td>
+         </tr>
+         <tr>
+            <td></td>
+            <td>
+               <br />
+               <button type="button" class="btn btn-primary"
+                       @onclick="() => CreatePublisher()">
+                  &#8195;Save&#8195;
+               </button>&#8194;
+               <button type="button" class="btn btn-warning"
+                       @onclick="() => Cancel()">
+                  &#8194;&#8201;Cancel&#8201;&#8194;
+               </button>
+            </td>
+         </tr> 
+      </tbody>
+   </table>
+</form>
+
+@code {
+   [Parameter]
+   public long isbnDummy { get; set; }
+
+   Publisher publisher = new Publisher();
+
+   protected async Task CreatePublisher()
+   {
+      await publisherService.Create(publisher);
+      Cancel();
+   }
+
+   void Cancel()
+   {
+      if (isbnDummy > 0)
+         navigationManager.NavigateTo("/editBook/" + isbnDummy);
+      else
+         if (isbnDummy == 0)
+            navigationManager.NavigateTo("/addBook");
+         else
+            navigationManager.NavigateTo("/listPublisher");
+   }
+}

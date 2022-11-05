@@ -1,0 +1,20 @@
+﻿@inherits LayoutComponentBase
+
+<div class="sidebar">
+   <NavMenu />
+</div>
+
+<div class="main">
+   <div class="top-row px-4">
+      <a>@today.ToString("dddd, dd MMMM yyyy")</a>
+      <LoginDisplay />
+   </div>
+
+   <div class="content px-4">
+      @Body
+   </div>
+</div>
+
+@code {
+   DateTime today = DateTime.Today;
+}

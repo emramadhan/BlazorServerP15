@@ -1,0 +1,505 @@
+﻿@page "/listBook"
+@using System.Text.RegularExpressions
+@inject IBookService bookService
+@inject IAuthorService authorService
+@inject IPublisherService publisherService
+
+<link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+<style>
+   .sort-th {
+       cursor: pointer;
+   }
+
+   .fa {
+       float: right;
+   }
+
+   .btn-custom {
+       color: black;
+       float: left;
+       padding: 8px 16px;
+       text-decoration: none;
+       transition: background-color .3s;
+       border: 2px solid #000;
+       margin: 0px 5px 0px 5px;
+   }
+</style>
+
+@if (books == null)
+{
+   <p><em>Loading...</em></p>
+}
+else
+{
+   <h3>Book List</h3>
+   <label for="Search">Search:</label>
+   <select for="Field" @bind="Field" @bind:event="onchange">
+      <option value="All">[ALL]</option>
+      <option value="ISBN">ISBN</option>
+      <option value="Title">Title</option>
+      <option value="AuthorId">Author</option>
+      <option value="PubId">Publisher</option>
+      <option value="PubYear">Publication Year</option>
+   </select>
+
+   <input type="text" id="txtValue"
+       placeholder="Type @field here ..." hidden="@valueIsHidden"
+       @bind="ValidValue" @bind:event="oninput"
+       @onchange="FieldValue" />
+
+   <select for="Publisher" hidden="@pubIsHidden"
+        @bind="@IdPubFilter" @bind:event="onchange">
+      <option value=-1 disabled selected hidden>
+         Select publisher ...
+      </option>
+      @foreach (var publisher in publishers)
+      {
+         <option value="@publisher.Id">@publisher.Name</option>
+      }
+   </select>
+   <label hidden="@pubDataIsHidden">
+      &emsp;City, Country: @publisher.City, @publisher.Country
+   </label>
+
+   <select for="Author" hidden="@authorIsHidden"
+        @bind="IdAuthorFilter" @bind:event="onchange">
+      <option value=-1 disabled selected hidden>
+         Select author ...
+      </option>
+      @foreach (var author in authors)
+      {
+         <option value="@author.Id">
+            @author.FName @author.LName
+         </option>
+      }
+   </select>
+   <label for="Phone" hidden="@authorDataIsHidden">
+      &emsp;Phone: @author.Phone
+   </label>
+   <br />
+
+   <table class="table table-bordered table-hover">
+      <thead>
+         <tr>
+            <th class="sort-th"
+             @onclick="@(() => SortTable("ISBN"))">
+               I S B N
+               <span class="fa @(SetSortIcon("ISBN"))"></span>
+            </th>
+            <th class="sort-th"
+             @onclick="@(() => SortTable("Title"))">
+               T i t l e
+               <span class="fa @(SetSortIcon("Title"))"></span>
+            </th>
+            <th class="sort-th"
+             @onclick="@(() => SortTable("AuthorName"))">
+               Author
+               <span class="fa @(SetSortIcon("AuthorName"))"></span>
+            </th>
+            <th class="sort-th"
+             @onclick="@(() => SortTable("PubYear"))">
+               Pub.<br />Year
+               <span class="fa @(SetSortIcon("PubYear"))"></span>
+            </th>
+            <th class="sort-th"
+             @onclick="@(() => SortTable("PurchDate"))">
+               Purchase<br />Date
+               <span class="fa @(SetSortIcon("PurchDate"))"></span>
+            </th>
+            <th class="sort-th"
+             @onclick="@(() => SortTable("PubName"))">
+               Publisher
+               <span class="fa @(SetSortIcon("PubName"))"></span>
+            </th>
+            <AuthorizeView Roles="Admin, User">
+               <th>Action</th>
+            </AuthorizeView>
+         </tr>
+      </thead>
+      <tbody>
+         @if (books == null || books.Count == 0)
+         {
+            <tr>
+               <td colspan="3">
+                  No Records to display
+               </td>
+            </tr>
+         }
+         else
+         {
+            long prevISBN = 0;
+            foreach (var book in books)
+            {
+               if (@book.ISBN != prevISBN)
+               {
+                  <tr>
+                     <td>
+                        <hr style="padding:0px; margin:0px;">
+                        @book.ISBN
+                     </td>
+                     <td>
+                        <hr style="padding:0px; margin:0px;">
+                        @book.Title
+                     </td>
+                     <td>
+                        <hr style="padding:0px; margin:0px;">
+                        @book.AuthorName
+                     </td>
+                     <td>
+                        <hr style="padding:0px; margin:0px;">
+                        @book.PubYear
+                     </td>
+                     <td>
+                        <hr style="padding:0px;  margin:0px;">
+                        @book.PurchDate.ToShortDateString()
+                     </td>
+                     <td>
+                        <hr style="padding:0px; margin:0px;">
+                        @book.PubName
+                     </td>
+                     <td>
+                        <AuthorizeView Roles="Admin, User">
+                           <hr style="padding:0px; margin:0px;">
+                           <a class="btn btn-primary" href='/editBook/@book.ISBN'>
+                              &#8194;Edit&#8194;
+                           </a>&#8194;
+                        </AuthorizeView>
+                        <AuthorizeView Roles="Admin">
+                           <a class="btn btn-warning" @onclick="() =>
+                              OpenDialog((long)book.ISBN,book.Title)">
+                              Delete
+                           </a>
+                        </AuthorizeView>
+                     </td>
+                  </tr>
+               }
+               else
+               {
+                  <tr>
+                     <td></td>
+                     <td></td>
+                     <td>
+                        <hr style="padding:0px; margin:0px;">
+                        @book.AuthorName
+                     </td>
+                  </tr>
+               }
+               prevISBN = (long)@book.ISBN;
+            }
+         }
+      </tbody>
+   </table>
+   <div class="pagination">
+      <button class="btn btn-custom" @onclick=@(async ()=>
+           await NavigateToPage("previous"))>
+         ◀
+      </button>
+
+      @for (int i = startPage; i <= endPage; i++)
+      {
+         var currentPage = i;
+         <button class="btn btn-custom pagebutton
+					  @(currentPage==curPage?"btn-info":"")"
+           @onclick=@(async () =>
+           await refreshRecords(currentPage))>
+            @currentPage
+         </button>
+      }
+      <button class="btn btn-custom" @onclick=@(async ()=>
+           await NavigateToPage("next"))>
+         ▶
+      </button>&emsp;
+      <AuthorizeView Roles="Admin, User">
+         <button class="btn btn-primary"
+              onclick="window.location.href='/addBook'">
+            Add new book
+         </button>
+      </AuthorizeView>
+   </div>
+   @if (dialogIsOpen)
+   {
+      <Dialog Caption="Delete a book"
+        Message="@message"
+        OnClose="@OnDialogClose"
+        Type="Dialog.Category.DeleteNot">
+      </Dialog>
+   }
+}
+
+@code {
+   Author author = new Author();
+   Publisher publisher = new Publisher();
+   List<Author> authors = new List<Author>();
+   List<Publisher> publishers = new List<Publisher>();
+   List<BookAuPub> books;
+   private long idBook;
+   private string message;
+   private bool dialogIsOpen = false;
+   private bool valueIsHidden = true;
+   private bool pubIsHidden = true;
+   private bool pubDataIsHidden = true;
+   private bool authorIsHidden = true;
+   private bool authorDataIsHidden = true;
+   private string searchTerm = "";
+
+   private string field = "All";
+   private string Field
+   {
+      get { return field; }
+      set
+      {
+         field = value;
+         valueIsHidden = field == "All" || field == "PubId"
+                         || field == "AuthorId";
+         pubIsHidden = field != "PubId";
+         authorIsHidden = field != "AuthorId";
+         pubDataIsHidden = true;
+         authorDataIsHidden = true;
+         idAuthorFilter = -1;
+         idPubFilter = -1;
+         if (field == "All")
+         {
+            searchTerm = "";
+            this.InitializedAsync().Wait();
+         }
+      }
+   }
+
+   private string _validValue = "";
+   string ValidValue
+   {
+      get { return _validValue; }
+      set
+      {
+         string pattern = @"([';-]|\WOR\W|\WUNION\W)";
+         _validValue = Regex.Replace(value, pattern, ""
+                                 , RegexOptions.IgnoreCase);
+      }
+   }
+
+   private void FieldValue()
+   {
+      switch (field)
+      {
+         case "ISBN":
+            searchTerm = "WHERE B." + field + " = " + _validValue;
+            break;
+         case "PubYear":
+            searchTerm = "WHERE " + field + " = " + _validValue;
+            break;
+         case "Title":
+            searchTerm = "WHERE " + field + " LIKE '%"
+                       + _validValue + "%'";
+            break;
+      }
+      this.InitializedAsync().Wait();
+      _validValue = "";
+   }
+
+   private int idPubFilter = -1;
+   private int IdPubFilter
+   {
+      get { return idPubFilter; }
+      set
+      {
+         idPubFilter = value;
+         this.GetPublisher().Wait();
+         searchTerm = "WHERE " + field + " = " + idPubFilter;
+         this.InitializedAsync().Wait();
+      }
+   }
+
+   private int idAuthorFilter = -1;
+   private int IdAuthorFilter
+   {
+      get { return idAuthorFilter; }
+      set
+      {
+         idAuthorFilter = value;
+         this.GetAuthor().Wait();
+         searchTerm =
+                 "WHERE B.ISBN IN (SELECT ISBN From BookAuthor WHERE "
+                 + field + " = " + idAuthorFilter + ")";
+         this.InitializedAsync().Wait();
+      }
+   }
+
+   protected async Task GetPublisher()
+   {
+      pubDataIsHidden = false;
+      publisher = await publisherService.ReadByPk(idPubFilter);
+   }
+
+   protected async Task GetAuthor()
+   {
+      authorDataIsHidden = false;
+      author = await authorService.ReadByPk(idAuthorFilter);
+   }
+
+   #region Pagination
+
+   int totalPages;
+   int totalRecords;
+   int curPage;
+   int pagerSize;
+   int pageSize;
+   int startPage;
+   int endPage;
+   string sortColumnName = "PurchDate";
+   string sortDir = "DESC";
+
+   #endregion
+
+   protected override async Task OnInitializedAsync()
+   {
+      authors = await authorService.ListAll();
+      publishers = await publisherService.ListAll();
+      await InitializedAsync();
+   }
+
+   protected async Task InitializedAsync()
+   {
+      pagerSize = 3;
+      pageSize = 6;
+      curPage = 1;
+      endPage = 0;
+      books = await bookService.ListAll((curPage - 1) * pageSize,
+                          pageSize, sortColumnName, sortDir, searchTerm);
+      totalRecords = await bookService.Count(searchTerm);
+      totalPages = (int)Math.Ceiling
+                              (totalRecords / (decimal)pageSize);
+      SetPagerSize("forward");
+   }
+
+   private void OpenDialog(long isbn, string title)
+   {
+      dialogIsOpen = true;
+      idBook = isbn;
+      message = "Do you want to delete the book \"" + title + "\"?";
+   }
+
+   private async Task OnDialogClose(bool isOk)
+   {
+      if (isOk)
+      {
+         await bookService.Delete(idBook);
+         books = await bookService.ListAll((curPage - 1) * pageSize,
+                         pageSize, sortColumnName, sortDir, searchTerm);
+      }
+      dialogIsOpen = false;
+   }
+
+   private bool isSortedAscending;
+   private string activeSortColumn;
+
+   private async Task<List<BookAuPub>> SortRecords
+                       (string columnName, string dir)
+   {
+      return await bookService.ListAll((curPage - 1) * pageSize,
+                      pageSize, columnName, dir, searchTerm);
+   }
+
+   private async Task SortTable(string columnName)
+   {
+      if (columnName != activeSortColumn)
+      {
+         books = await SortRecords(columnName, "ASC");
+         isSortedAscending = true;
+         activeSortColumn = columnName;
+      }
+      else
+      {
+         if (isSortedAscending)
+         {
+            books = await SortRecords(columnName, "DESC");
+         }
+         else
+         {
+            books = await SortRecords(columnName, "ASC");
+         }
+
+         isSortedAscending = !isSortedAscending;
+      }
+      sortColumnName = columnName;
+      sortDir = isSortedAscending ? "ASC" : "DESC";
+   }
+
+   private string SetSortIcon(string columnName)
+   {
+      if (activeSortColumn != columnName)
+      {
+         return string.Empty;
+      }
+      if (isSortedAscending)
+      {
+         return "fa-sort-up";
+      }
+      else
+      {
+         return "fa-sort-down";
+      }
+   }
+
+   public async Task refreshRecords(int currentPage)
+   {
+      books = await bookService.ListAll((currentPage - 1)
+              * pageSize, pageSize, sortColumnName, sortDir, searchTerm);
+      curPage = currentPage;
+      this.StateHasChanged();
+   }
+
+   public void SetPagerSize(string direction)
+   {
+      if (direction == "forward" && endPage < totalPages)
+      {
+         startPage = endPage + 1;
+         if (endPage + pagerSize < totalPages)
+         {
+            endPage = startPage + pagerSize - 1;
+         }
+         else
+         {
+            endPage = totalPages;
+         }
+         this.StateHasChanged();
+      }
+      else if (direction == "back" && startPage > 1)
+      {
+         endPage = startPage - 1;
+         startPage = startPage - pagerSize;
+      }
+      else
+      {
+         startPage = 1;
+         endPage = totalPages;
+      }
+   }
+
+   public async Task NavigateToPage(string direction)
+   {
+      if (direction == "next")
+      {
+         if (curPage < totalPages)
+         {
+            if (curPage == endPage)
+            {
+               SetPagerSize("forward");
+            }
+            curPage += 1;
+         }
+      }
+      else if (direction == "previous")
+      {
+         if (curPage > 1)
+         {
+            if (curPage == startPage)
+            {
+               SetPagerSize("back");
+            }
+            curPage -= 1;
+         }
+      }
+      await refreshRecords(curPage);
+   }
+}

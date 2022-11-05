@@ -1,0 +1,106 @@
+﻿@page "/editAuthor/{id:int}"
+@attribute [Authorize(Roles = "Admin, User")]
+@inject IAuthorService authorService
+@inject Microsoft.AspNetCore.Components.NavigationManager navigationManager
+<h2>
+   Edit Author
+</h2>
+
+<form>
+   <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tbody>
+         <tr>
+            <td>
+               <label for="FName" class="control-label">
+                  First Name
+               </label>
+            </td>
+            <td>
+               <input for="FName" class="form-control"
+                      @bind="@author.FName" />
+            </td>
+         </tr>
+         <tr>
+            <td>
+               <label for="LName" class="control-label">
+                  Last Name
+               </label>
+            </td>
+            <td>
+               <input for="LName" class="form-control"
+                      @bind="@author.LName" />
+            </td>
+         </tr>
+         <tr>
+            <td>
+               <label for="Phone" class="control-label">
+                  Phone
+               </label>
+            </td>
+            <td>
+               <input for="Phone" class="form-control"
+                      @bind="@author.Phone" />
+            </td>
+         </tr>
+         <tr>
+            <td></td>
+            <td>
+               <br />
+               <button type="button" class="btn btn-primary"
+                       @onclick="() => OpenDialog(author.LName)">
+                  &#8195;Save&#8195;
+               </button>&#8194;
+               <button type="button" class="btn btn-warning"
+                       @onclick="() => Cancel()">
+                  &#8194;&#8201;Cancel&#8201;&#8194;
+               </button>
+            </td>
+         </tr>
+      </tbody>
+   </table>
+</form>
+@if (DialogIsOpen)
+{
+   <Dialog Caption="Update an author"
+                 Message="@message"
+                 OnClose="@OnDialogClose"
+                 Type="Dialog.Category.SaveNot">
+   </Dialog>
+}
+
+@code  {
+
+   [Parameter]
+   public int id { get; set; }
+
+   Author author = new Author();
+   private string message;
+   private bool DialogIsOpen = false;
+
+   protected override async Task OnInitializedAsync()
+   {
+      author = await authorService.ReadByPk(id);
+   }
+
+   private void OpenDialog(string title)
+   {
+      DialogIsOpen = true;
+      message = "Do you want to save the updates of the author \""
+                + title + "\"?";
+   }
+
+   private async Task OnDialogClose(bool isOk)
+   {
+      if (isOk)
+      {
+         await authorService.Update(author);
+         navigationManager.NavigateTo("/listAuthor");
+      }
+      DialogIsOpen = false;
+   }
+
+   void Cancel()
+   {
+      navigationManager.NavigateTo("/listAuthor");
+   }
+}

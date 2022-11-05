@@ -1,0 +1,21 @@
+﻿@layout MainLayout
+@inherits LayoutComponentBase
+
+<h5>Good @time!</h5>
+<br />
+
+@Body
+
+@code {
+   private string time;
+   protected override void OnInitialized()
+   {
+      int hour = DateTime.Now.Hour;
+      if (hour < 5 && hour > 17)
+         time = "Evening";
+      else if (hour < 12)
+         time = "Morning";
+      else
+         time = "Afternoon";
+   }
+}

@@ -1,0 +1,179 @@
+﻿@page "/addBook"
+@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "User")]
+@inject IBookService bookService
+@inject IPublisherService publisherService
+@inject IBookAuthorService bookAuthorService
+@inject Microsoft.AspNetCore.Components.NavigationManager navigationManager
+<h3>
+   Add Book
+</h3>
+
+<form>
+   <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tbody>
+         <tr>
+            <td><label for="ISBN" class="control-label">ISBN</label>
+            </td>
+            <td><input for="ISBN" class="form-control" 
+                @bind="@book.ISBN" /></td>
+         </tr>
+         <tr>
+            <td><label for="Title" class="control-label">
+                Title</label></td>
+            <td><input for="Title" class="form-control" 
+                @bind="@book.Title" /></td>
+         </tr>
+         @if (@hasAdded)
+         { 
+            <tr>
+               <td><label for="Authors" class="control-label">
+                   Authors</label></td>
+               <td>
+                  <label style="width: 95px;">
+                     <u><i><b>Sequence</b></i></u>
+                  </label>
+                  <label><u><i><b>Full Name</b></i></u></label><br />
+                  @foreach (var bookAuthorName in bookAuthorNames)
+                  {
+                     <input type="number"
+                            @bind="@bookAuthorName.AuthorOrd"
+                            @bind:event="oninput"
+                            style="width: 75px;" min="0" max="5" />
+                     @if (@bookAuthorName.ISBN > 0)
+                     {
+                        <input name="AreChecked" type="checkbox"
+                               value="@bookAuthorName.AuthorId" checked
+                               @onchange="eventArgs => { CheckChanged
+                               (bookAuthorName, eventArgs.Value);}" /> 
+                     }
+                     else
+                     {
+                        <input name="AreChecked" type="checkbox"
+                               value="@bookAuthorName.AuthorId"
+                               @onchange="eventArgs => { CheckChanged
+                            (bookAuthorName, eventArgs.Value);}" />
+                     }
+                     <label for="AuthorName" style="width: 150px;">
+                        @bookAuthorName.AuthorName
+                     </label><br />
+                  }
+               </td>
+               <td>
+                  &#8194;
+                  <a class="btn btn-primary"
+                          href='/addAuthor/@book.ISBN'>
+                     &#8194;Add author&#8194;
+                  </a><br />
+               </td>
+            </tr>
+         }
+         <tr>
+            <td><label for="PubYear" class="control-label">
+                       Publication Year</label></td>
+            <td><input for="PubYear" class="form-control" 
+                       @bind="@book.PubYear" /></td>
+         </tr>
+         <tr>
+            <td><label for="PurchDate" class="control-label">
+                       Purchase Date</label></td>
+            <td><input type="date" class="form-control" 
+                       @bind="@book.PurchDate" /></td>
+         </tr>
+         <tr>
+            <td><label for="Publisher" class="control-label">
+                       Publisher</label></td>
+            <td>
+               <select for="Publisher" class="form-control" 
+                       @bind="@book.PubId">
+                  <option value=0 disabled selected hidden>
+                  [Select Publisher]</option>
+                  @foreach (var publisher in publishers)
+                  {
+                     <option value="@publisher.Id">
+                             @publisher.Name</option>
+                  }
+               </select>
+            </td>
+            <td>
+               &#8194;
+               <a class="btn btn-primary"
+                  href='/addPublisher/0'>Add publisher</a>
+            </td>
+         </tr>
+         <tr>
+            <td></td>
+            <td>
+               <br />
+               <button type="button" class="btn btn-primary"
+                       @onclick="() => CreateBook()">
+                  &#8195;Save&#8195;
+               </button>&#8194;
+               <button type="button" class="btn btn-warning"
+                       @onclick="() => Cancel()">
+                  &#8194;&#8201;Cancel&#8201;&#8194;
+               </button>
+            </td>
+         </tr>
+      </tbody>
+   </table>
+</form>
+
+@code {
+
+   Book book = new Book();  
+   BookAuthorName bookAuthorName = new BookAuthorName();
+   List<Publisher> publishers = new List<Publisher>();
+   List<BookAuthorName>bookAuthorNames = new List<BookAuthorName>();
+   List<Book> books = new List<Book>();
+   bool hasAdded = false;
+
+   protected override async Task OnInitializedAsync()
+   {
+      book.PurchDate = DateTime.Now;      
+      publishers = await publisherService.ListAll();
+   }
+   protected async Task CreateBook()
+   {
+      if (hasAdded)
+      {
+         navigationManager.NavigateTo("/listBook");
+      }
+      else
+      {
+         await bookService.Create(book);
+         bookAuthorNames = await bookAuthorService.ListAll(0);
+         hasAdded = !hasAdded;
+      }
+   }
+
+   protected async Task CheckChanged(BookAuthorName bookAuthorName,
+                                     object checkValue)
+   {
+      long isbn = 0;
+      if (book.ISBN > isbn)
+      {
+         isbn = (long)book.ISBN;
+         bookAuthorNames = await bookAuthorService.ListAll(isbn);
+         if ((bool)checkValue)
+         {
+            // insert
+            bookAuthorName.ISBN = isbn;
+            await bookAuthorService.Create(bookAuthorName);
+         }
+         else
+         {
+            //delete
+            bookAuthorName.AuthorOrd = 0;
+            await bookAuthorService.Delete
+                  (isbn, bookAuthorName.AuthorId);
+         }
+         bookAuthorNames = await bookAuthorService.ListAll(isbn);
+      }
+   }
+
+   void Cancel()
+   {
+      navigationManager.NavigateTo("/listBook");
+   }
+}

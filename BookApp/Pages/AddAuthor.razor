@@ -1,0 +1,84 @@
+﻿@page "/addAuthor/{isbnDummy:long}"
+@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "User")]
+@inject IAuthorService authorService
+@inject Microsoft.AspNetCore.Components.NavigationManager navigationManager
+<h3>
+   Add Author
+</h3>
+
+<form>
+   <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tbody>
+         <tr>
+            <td>
+               <label for="FName" class="control-label">
+                  First Name
+               </label>
+            </td>
+            <td>
+               <input for="FName" class="form-control"
+                      @bind="@author.FName" />
+            </td>
+         </tr>
+         <tr>
+            <td>
+               <label for="LName" class="control-label">
+                  Last Name
+               </label>
+            </td>
+            <td>
+               <input for="LName" class="form-control"
+                      @bind="@author.LName" />
+            </td>
+         </tr>
+         <tr>
+            <td>
+               <label for="Phone" class="control-label">
+                  Phone
+               </label>
+            </td>
+            <td>
+               <input for="Phone" class="form-control"
+                      @bind="@author.Phone" />
+            </td>
+         </tr>
+         <tr>
+            <td></td>
+            <td>
+               <br />
+               <button type="button" class="btn btn-primary"
+                       @onclick="() => CreateAuthor()">
+                  &#8195;Save&#8195;
+               </button>&#8194;
+               <button type="button" class="btn btn-warning"
+                       @onclick="() => Cancel()">
+                  &#8194;&#8201;Cancel&#8201;&#8194;
+               </button>
+            </td>
+         </tr>
+      </tbody>
+   </table>
+</form>
+
+@code {
+
+   [Parameter]
+   public long isbnDummy { get; set; }
+
+   Author author = new Author();
+
+   protected async Task CreateAuthor()
+   {
+      await authorService.Create(author);
+      Cancel();
+   }
+
+   void Cancel()
+   {
+      if (isbnDummy > 0)
+         navigationManager.NavigateTo("/editBook/" + isbnDummy);
+      else
+         navigationManager.NavigateTo("/listAuthor");
+   }
+}

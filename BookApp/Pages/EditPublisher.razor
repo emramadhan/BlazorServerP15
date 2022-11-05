@@ -1,0 +1,106 @@
+﻿@page "/editPublisher/{id:int}"
+@attribute [Authorize(Roles = "Admin, User")]
+@inject IPublisherService publisherService
+@inject Microsoft.AspNetCore.Components.NavigationManager navigationManager
+
+<h2>
+   Edit Publisher
+</h2>
+
+<form>
+   <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tbody>
+         <tr>
+            <td>
+               <label for="Name" class="control-label">
+                  Name
+               </label>
+            </td>
+            <td>
+               <input for="Name" class="form-control"
+                      @bind="@publisher.Name" />
+            </td>
+         </tr>
+         <tr>
+            <td>
+               <label for="City" class="control-label">
+                  City
+               </label>
+            </td>
+            <td>
+               <input for="City" class="form-control"
+                      @bind="@publisher.City" />
+            </td>
+         </tr>
+         <tr>
+            <td>
+               <label for="Country" class="control-label">
+                  Country
+               </label>
+            </td>
+            <td>
+               <input for="Country" class="form-control"
+                      @bind="@publisher.Country" />
+            </td>
+         </tr>
+         <tr>
+            <td></td>
+            <td>
+               <br />
+               <button type="button" class="btn btn-primary"
+                       @onclick="() => OpenDialog(publisher.Name)">
+                  &#8195;Save&#8195;
+               </button>&#8194;
+               <button type="button" class="btn btn-warning"
+                       @onclick="() => Cancel()">
+                  &#8194;&#8201;Cancel&#8201;&#8194;
+               </button>
+            </td>
+         </tr>
+      </tbody>
+   </table>
+</form>
+
+@if (DialogIsOpen)
+{
+   <Dialog Caption="Update a publisher"
+           Message="@message"
+           OnClose="@OnDialogClose"
+           Type="Dialog.Category.SaveNot">
+   </Dialog>
+}
+
+@code  {
+
+   [Parameter] public int id { get; set; }
+
+   Publisher publisher = new Publisher();
+   private string message;
+   private bool DialogIsOpen = false;
+
+   protected override async Task OnInitializedAsync()
+   {
+      publisher = await publisherService.ReadByPk(id);
+   }
+
+   private void OpenDialog(string title)
+   {
+      DialogIsOpen = true;
+      message = "Do you want to save the updates of the publisher \"" + title + "\"?";
+   }
+
+   private async Task OnDialogClose(bool isOk)
+   {
+      if (isOk)
+      {
+         await publisherService.Update(publisher);
+         navigationManager.NavigateTo("/listPublisher");
+      }
+      DialogIsOpen = false;
+   }
+
+   void Cancel()
+   {
+      navigationManager.NavigateTo("/listPublisher");
+   }
+}
