@@ -1,5 +1,5 @@
 ﻿@page "/listAuthor"
-@attribute [Authorize(Roles = "User")]
+@attribute [Authorize(Roles = "Admin, User")]
 @inject IAuthorService authorService
 
 <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
